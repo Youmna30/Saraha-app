@@ -28,7 +28,8 @@ app.use( ( err, req, res, next ) => {
     }
     return res.status( 500 ).json( {
         message: "Something went wrong",
-        success: false
+        success: false,
+        stack: err.stack
     } )
 
 

@@ -2,16 +2,16 @@ import { sendEmail } from "../../../common/email/nodemailer.js";
 import * as authRepository from "../repository/auth.repo.js";
 import * as otpRepository from "../repository/otp.repo.js";
 import * as userRepository from "../../user/repository/user.repo.js"
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
 import * as otp from "../../../common/utils/otp.js";
 import { userAlreadyVerified, userNotExist, userNotVerified, userAlreadyExist } from "../../user/errors.js";
 import { incorrectPassword, invalidCode, optExpired } from "../errors.js";
+import { comparePassword, hashPassword } from "../utils/hash.js";
+import { generateToken } from "../utils/token.js";
 
 export async function register( userData ) {
     const userExist = await authRepository.checkUserExistByEmail( userData.email );
     if ( userExist ) throw userAlreadyExist;
-    userData.password = await bcrypt.hash( userData.password, 10 );
+    userData.password = await hashPassword( userData.password );
     const createdUser = await authRepository.createUser( userData );
     const otpCode = otp.generateOtp();
     await otpRepository.createOtp( {
@@ -19,7 +19,7 @@ export async function register( userData ) {
         email: userData.email,
         expiresAt: Date.now() + 1000 * 60 * 5
     } )
-    await sendEmail( userData.email, "Verification code", `Your verification code is ${ otp }` )
+    await sendEmail( userData.email, "Verification code", `Your verification code is ${ otpCode }` )
     return createdUser;
 }
 
@@ -41,9 +41,9 @@ export async function login( email, password ) {
     const user = await authRepository.checkUserExistByEmail( email );
     if ( !user ) throw userNotExist;
     if ( user.isVerified === false ) throw userNotVerified;
-    const match = await bcrypt.compare( password, user.password );
+    const match = await comparePassword( password, user.password );
     if ( !match ) throw incorrectPassword;
-    const token = jwt.sign( { id: user._id, email: user.email, name: user.name }, process.env.JWT_SECRET_KEY, { expiresIn: "1h" } )
+    const token = generateToken( { id: user._id, email: user.email, name: user.name } );
     return token;
 }
 
