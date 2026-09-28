@@ -17,11 +17,20 @@ app.use( "/message", messageRouter );
 
 
 app.use( ( err, req, res, next ) => {
-    res.json( {
-        message: err.message,
-        success: false,
-        stack: err.stack
+    console.log( err ); // to be removed on production
+    if ( err.isOperational === true ) {
+        return res.status( err.statusCode ).json( {
+            message: err.message,
+            success: false,
+            stack: err.stack // to be removed on production
+        } )
+    }
+    return res.status( 500 ).json( {
+        message: "Something went wrong",
+        success: false
     } )
+
+
 } )
 
 app.listen( 3000, () => {
