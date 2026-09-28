@@ -5,12 +5,12 @@ import * as userRepository from "../../user/repository/user.repo.js"
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import * as otp from "../../../common/utils/otp.js";
-import { userAlreadyVerified, userNotExist, userNotVerified } from "../../user/errors.js";
+import { userAlreadyVerified, userNotExist, userNotVerified, userAlreadyExist } from "../../user/errors.js";
 import { incorrectPassword, invalidCode, optExpired } from "../errors.js";
 
 export async function register( userData ) {
     const userExist = await authRepository.checkUserExistByEmail( userData.email );
-    if ( userExist ) throw new userAlreadyExist;
+    if ( userExist ) throw userAlreadyExist;
     userData.password = await bcrypt.hash( userData.password, 10 );
     const createdUser = await authRepository.createUser( userData );
     const otpCode = otp.generateOtp();
@@ -25,7 +25,7 @@ export async function register( userData ) {
 
 export async function verifyAccount( email, code ) {
     const user = await authRepository.checkUserExistByEmail( email );
-    if ( !user ) throw new userNotExist;
+    if ( !user ) throw userNotExist;
     if ( user.isVerified === true ) throw userAlreadyVerified;
     const otp = await otpRepository.getOtpByEmail( email );
     if ( !otp ) throw optExpired;
@@ -39,7 +39,7 @@ export async function verifyAccount( email, code ) {
 
 export async function login( email, password ) {
     const user = await authRepository.checkUserExistByEmail( email );
-    if ( !user ) throw new userNotExist;
+    if ( !user ) throw userNotExist;
     if ( user.isVerified === false ) throw userNotVerified;
     const match = await bcrypt.compare( password, user.password );
     if ( !match ) throw incorrectPassword;
