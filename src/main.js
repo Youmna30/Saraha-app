@@ -5,6 +5,7 @@ import "./common/db/mongoose.js";
 import authRouter from "./app/auth/auth.route.js";
 import userRouter from "./app/user/user.route.js";
 import messageRouter from './app/message/message.route.js';
+import { logger } from "./common/logger/logger.js";
 
 
 const app = express();
@@ -17,7 +18,7 @@ app.use( "/message", messageRouter );
 
 
 app.use( ( err, req, res, next ) => {
-    console.log( err ); // to be removed on production
+    logger.error( err.message, err ) // to be removed on production
     if ( err.isOperational === true ) {
         return res.status( err.statusCode ).json( {
             message: err.message,
@@ -34,7 +35,7 @@ app.use( ( err, req, res, next ) => {
 } )
 
 app.listen( 3000, () => {
-    console.log( "Server is running on port 3000" )
+    logger.info( "Server is running on port 3000" )
 
 } )
 
