@@ -57,3 +57,12 @@ export async function sendOtp( req, res, next ) {
         next( error );
     }
 }
+export async function resetPassword( req, res, next ) {
+    try {
+        const { email, code, newPassword } = req.body;
+        await authService.resetPassword( email, code, newPassword );
+        res.sendStatus( 204 );
+    } catch ( error ) {
+        next( error );
+    }
+}

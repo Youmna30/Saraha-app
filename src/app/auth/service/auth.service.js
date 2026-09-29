@@ -59,3 +59,12 @@ export async function sendOtp( email ) {
     } )
     sendEmail( email, "Reset Password OTP", `Your otp code is ${ otpCode }` );
 }
+
+export async function resetPassword( email, code, newPassword ) {
+    const otp = await otpRepository.getOtpByEmail( email );
+    if ( !otp ) throw optExpired;
+    if ( otp.code !== code ) throw invalidCode;
+    await otpRepository.deleteOtp( email );
+    const hashNewPassword = await hashPassword( newPassword );
+    await userRepository.updateUserByEmail( email, { password: hashNewPassword } );
+}
