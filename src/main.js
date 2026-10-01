@@ -6,9 +6,12 @@ import authRouter from "./app/auth/auth.route.js";
 import userRouter from "./app/user/user.route.js";
 import messageRouter from './app/message/message.route.js';
 import { logger } from "./common/logger/logger.js";
-
+import cors from "cors";
 
 const app = express();
+app.use( cors( {
+    origin: "http://localhost:4200"
+} ) );
 app.use( express.json() );
 
 app.use( "/auth", authRouter );

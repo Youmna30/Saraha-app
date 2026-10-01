@@ -73,3 +73,21 @@ export async function resetPassword( req, res, next ) {
         next( error );
     }
 }
+export async function loginWithGoogle( req, res, next ) {
+    try {
+
+        const { idToken } = req.body;
+        const token = await authService.loginWithGoogle( idToken );
+        res.cookie( 'access_token', token, {
+            httpOnly: true,
+            maxAge: 60 * 60 * 1000
+        } );
+        res.status( 200 ).json( {
+            message: " User Login Successfully",
+            success: true
+        } )
+
+    } catch ( error ) {
+        next( error );
+    }
+}
