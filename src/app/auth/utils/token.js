@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
+import { env } from "../../../lib/config/env.js";
 
 export function generateToken( payload ) {
-    return jwt.sign( payload, process.env.JWT_SECRET_KEY, { expiresIn: "1h" } )
+    return jwt.sign( payload, env.jwt.secretKey, { expiresIn: "1h" } )
 }

@@ -1,13 +1,14 @@
-import { sendEmail } from "../../../common/email/nodemailer.js";
+import { sendEmail } from "../../../lib/email/nodemailer.js";
 import * as authRepository from "../repository/auth.repo.js";
 import * as otpRepository from "../repository/otp.repo.js";
 import * as userRepository from "../../user/repository/user.repo.js"
-import * as otp from "../../../common/utils/otp.js";
+import * as otp from "../../../lib/utils/otp.js";
 import { userAlreadyVerified, userNotExist, userNotVerified, userAlreadyExist } from "../../user/errors.js";
 import { incorrectPassword, invalidCode, optExpired } from "../errors.js";
 import { comparePassword, hashPassword } from "../utils/hash.js";
 import { generateToken } from "../utils/token.js";
-import { verifyGoogleToken } from "../../../common/utils/google.auth.js";
+import { verifyGoogleToken } from "../../../lib/utils/google.auth.js";
+import { mailjetProvider } from "../../../lib/email/init.js";
 
 export async function register( userData ) {
     const userExist = await authRepository.checkUserExistByEmail( userData.email );
@@ -20,7 +21,7 @@ export async function register( userData ) {
         email: userData.email,
         expiresAt: Date.now() + 1000 * 60 * 5
     } )
-    await sendEmail( userData.email, "Verification code", `Your verification code is ${ otpCode }` )
+    await mailjetProvider.sendEmail( userData.email, "Verification code", `Your verification code is ${ otpCode }` )
     return createdUser;
 }
 
@@ -58,7 +59,7 @@ export async function sendOtp( email ) {
         email: email,
         expiresAt: Date.now() + 1000 * 60 * 5
     } )
-    sendEmail( email, "Reset Password OTP", `Your otp code is ${ otpCode }` );
+    await mailjetProvider.sendEmail( email, "Reset Password OTP", `Your otp code is ${ otpCode }` );
 }
 
 export async function resetPassword( email, code, newPassword ) {

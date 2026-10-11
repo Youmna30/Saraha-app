@@ -1,4 +1,4 @@
-import { AppError } from "../../common/error/error.js"
+import { AppError } from "../../pkg/error/error.js"
 
 export const userNotExist = new AppError( "User isn't existed", 404 );
 export const userNotVerified = new AppError( "User isn't verified", 403 );

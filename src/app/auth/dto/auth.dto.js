@@ -1,4 +1,4 @@
-import { email, z } from "zod";
+import { z } from "zod";
 
 export const resgisterDTO = z.object( {
     email: z.email( "Email is required" ).toLowerCase().trim(),
