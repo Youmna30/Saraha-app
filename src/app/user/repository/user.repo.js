@@ -12,3 +12,8 @@ export async function updateUserByEmail( email, updatedData ) {
 export async function findUserById( id ) {
     return await User.findOne( { _id: id, isDeleted: false }, { password: 0 } );
 }
+
+export async function getAllUsers() {
+    return await User.find();
+
+}

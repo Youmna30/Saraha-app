@@ -39,7 +39,10 @@ const userSchema = new Schema( {
         type: String,
         enum: [ "male", "female" ],
         default: "male"
-    }
+    },
+    profilePicturePath: String,
+    coverImagesPaths: [ String ],
+    cvPath: String
 
 }, {
     timestamps: {
