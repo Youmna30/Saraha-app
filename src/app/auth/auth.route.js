@@ -9,4 +9,6 @@ authRouter.post( "/login", authController.login );
 authRouter.post( "/send-otp", authController.sendOtp )
 authRouter.patch( "/reset-password", checkIdempotency(), authController.resetPassword );
 authRouter.post( "/google-login", authController.loginWithGoogle );
+authRouter.post( "/refresh-token", authController.refreshToken );
+
 export default authRouter;

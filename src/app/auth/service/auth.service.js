@@ -4,9 +4,9 @@ import * as otpRepository from "../repository/otp.repo.js";
 import * as userRepository from "../../user/repository/user.repo.js"
 import * as otp from "../../../lib/utils/otp.js";
 import { userAlreadyVerified, userNotExist, userNotVerified, userAlreadyExist } from "../../user/errors.js";
-import { incorrectPassword, invalidCode, optExpired } from "../errors.js";
+import { incorrectPassword, invalidCode, invalidRefreshToken, noToken, optExpired } from "../errors.js";
 import { comparePassword, hashPassword } from "../utils/hash.js";
-import { generateToken } from "../utils/token.js";
+import { decodeToken, generateAccessToken, generateRefreshToken } from "../utils/token.js";
 import { verifyGoogleToken } from "../../../lib/utils/google.auth.js";
 import { mailjetProvider } from "../../../lib/email/init.js";
 
@@ -45,8 +45,10 @@ export async function login( email, password ) {
     if ( user.isVerified === false ) throw userNotVerified;
     const match = await comparePassword( password, user.password );
     if ( !match ) throw incorrectPassword;
-    const token = generateToken( { id: user._id, email: user.email, name: user.name } );
-    return token;
+    const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } );
+    const refreshToken = generateRefreshToken( { id: user._id, email: user.email, name: user.name } );
+
+    return { accessToken, refreshToken };
 }
 
 export async function sendOtp( email ) {
@@ -75,7 +77,10 @@ export async function loginWithGoogle( idToken ) {
     const payload = await verifyGoogleToken( idToken );
     const user = await authRepository.checkUserExistByEmail( payload.email );
     if ( user ) {
-        return generateToken( { id: user._id, email: user.email, name: user.name } );
+        const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } );
+        const refreshToken = generateRefreshToken( { id: user._id, email: user.email, name: user.name } );
+
+        return { accessToken, refreshToken };
     }
     const createdUser = await authRepository.createUser( {
         email: payload.email,
@@ -83,5 +88,21 @@ export async function loginWithGoogle( idToken ) {
         provider: "google",
         isVerified: true
     } );
-    return generateToken( { id: createdUser._id, email: createdUser.email, name: createdUser.name } );
+    const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } );
+    const refreshToken = generateRefreshToken( { id: user._id, email: user.email, name: user.name } );
+
+    return { accessToken, refreshToken };
+}
+
+export async function refreshToken( refreshToken ) {
+    if ( !refreshToken ) {
+        throw noToken;
+    }
+    const user = await decodeToken( refreshToken );
+    if ( !user ) {
+        throw invalidRefreshToken;
+    }
+    const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } )
+    return accessToken;
+
 }

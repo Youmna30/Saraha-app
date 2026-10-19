@@ -6,7 +6,7 @@ export function authGuard( req, res, next ) {
     try {
         const token = req.cookies.access_token;
         if ( !token ) throw noToken;
-        req.user = jwt.verify( token, env.jwt.secretKey );
+        req.user = jwt.verify( token, env.jwt.secretAccessKey );
         next();
 
     } catch ( error ) {

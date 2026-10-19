@@ -5,7 +5,8 @@ dotenv.config();
 const schema = z.object( {
     PORT: z.string().default( "3000" ),
     MONGODB_URL: z.string(),
-    JWT_SECRET_KEY: z.string(),
+    JWT_SECRET_ACCESS_KEY: z.string(),
+    JWT_SECRET_REFRESH_KEY: z.string(),
     REDIS_HOST: z.string(),
     REDIS_PORT: z.string().default( "6379" ),
     REDIS_PASSWORD: z.string().optional(),
@@ -33,7 +34,9 @@ export const env = {
         password: parsed.MAIL_PASSWORD
     },
     jwt: {
-        secretKey: parsed.JWT_SECRET_KEY
+        secretAccessKey: parsed.JWT_SECRET_ACCESS_KEY,
+        secretRefreshKey: parsed.JWT_SECRET_REFRESH_KEY
+
     },
     google: {
         googleWebClientId: parsed.GOOGLE_WEB_OAUTH_CLIENT_ID

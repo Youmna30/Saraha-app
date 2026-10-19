@@ -1,5 +1,6 @@
 import { validateBody } from "../../../lib/validation/validation.js";
 import { loginDTO, resetPasswordDTO, resgisterDTO, sendOtpDTO, verifyAccountDTO } from "../dto/auth.dto.js";
+import { noToken } from "../errors.js";
 import * as authService from "../service/auth.service.js";
 
 export async function register( req, res, next ) {
@@ -35,10 +36,15 @@ export async function login( req, res, next ) {
     try {
         const data = validateBody( loginDTO, req.body );
         const { email, password } = data;
-        const token = await authService.login( email, password );
-        res.cookie( 'access_token', token, {
+        const { accessToken, refreshToken } = await authService.login( email, password );
+        res.cookie( 'access_token', accessToken, {
             httpOnly: true,
             maxAge: 60 * 60 * 1000
+        } );
+        res.cookie( 'refresh_token', refreshToken, {
+            httpOnly: true,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: "/api/auth/refresh-token"
         } );
         res.status( 200 ).json( {
             message: " User Login Successfully",
@@ -80,10 +86,15 @@ export async function loginWithGoogle( req, res, next ) {
     try {
 
         const { idToken } = req.body;
-        const token = await authService.loginWithGoogle( idToken );
-        res.cookie( 'access_token', token, {
+        const { accessToken, refreshToken } = await authService.loginWithGoogle( idToken );
+        res.cookie( 'access_token', accessToken, {
             httpOnly: true,
             maxAge: 60 * 60 * 1000
+        } );
+        res.cookie( 'refresh_token', refreshToken, {
+            httpOnly: true,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: "/api/auth/refresh-token"
         } );
         res.status( 200 ).json( {
             message: " User Login Successfully",
@@ -93,4 +104,24 @@ export async function loginWithGoogle( req, res, next ) {
     } catch ( error ) {
         next( error );
     }
+}
+export async function refreshToken( req, res, next ) {
+    try {
+        const refreshToken = req.cookies?.refresh_token;
+        if ( !refreshToken ) {
+            throw noToken;
+        }
+        const accessToken = await authService.refreshToken( refreshToken );
+        res.cookie( 'access_token', accessToken, {
+            httpOnly: true,
+            maxAge: 60 * 60 * 1000
+        } );
+        res.status( 200 ).json( {
+            message: "Token refreshed successfully",
+            success: true
+        } )
+    } catch ( error ) {
+        next( error );
+    }
+
 }
