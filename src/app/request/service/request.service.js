@@ -4,6 +4,7 @@ import * as messageRepo from "../../message/respository/message.repo.js"
 import { noMessagesFound } from "../../message/error.js";
 import * as userRepo from "../../user/repository/user.repo.js"
 import { userNotExist } from "../../user/errors.js";
+import * as conversationRepo from "../../conversation/repository/conversation.repo.js";
 
 export async function getSenderRequests( senderId ) {
     const requests = await requestRepo.getSenderRequests( senderId );
@@ -32,7 +33,13 @@ export async function acceptRequest( requestId, senderId ) {
     if ( checkRequest.status === "rejected" ) throw requestAlreadyRejected;
     if ( senderId !== checkRequest.sender.toString() ) throw messageSenderOnly;
     const request = await requestRepo.acceptRequest( requestId );
-    await messageRepo.changeMessageIdentity( request.messageId )
+    await messageRepo.changeMessageIdentity( request.messageId );
+    const conversation = await conversationRepo.getConversationOfTwoParticipants( request.sender, request.receiver );
+    if ( !conversation ) {
+        await conversationRepo.createConversation( { participants: [ request.sender, request.receiver ], messages: [ request.messageId ] } );
+    } else {
+        await conversationRepo.addMessageToConversation( conversation._id, request.messageId );
+    }
     return request;
 
 }

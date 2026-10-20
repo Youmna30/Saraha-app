@@ -1,6 +1,6 @@
 import Message from '../model/message.model.js';
 
-export async function createMessage( content, receiver, sender ) {
+export async function createMessage( content, receiver, sender, isAnonymous = true ) {
 
     return await Message.create( { content, receiver, sender } );
 
