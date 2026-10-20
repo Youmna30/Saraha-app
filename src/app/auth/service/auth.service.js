@@ -4,11 +4,12 @@ import * as otpRepository from "../repository/otp.repo.js";
 import * as userRepository from "../../user/repository/user.repo.js"
 import * as otp from "../../../lib/utils/otp.js";
 import { userAlreadyVerified, userNotExist, userNotVerified, userAlreadyExist } from "../../user/errors.js";
-import { incorrectPassword, invalidCode, invalidRefreshToken, noToken, optExpired } from "../errors.js";
+import { blockedLogin, incorrectPassword, invalidCode, invalidRefreshToken, noToken, optExpired } from "../errors.js";
 import { comparePassword, hashPassword } from "../utils/hash.js";
 import { decodeToken, generateAccessToken, generateRefreshToken } from "../utils/token.js";
 import { verifyGoogleToken } from "../../../lib/utils/google.auth.js";
 import { mailjetProvider } from "../../../lib/email/init.js";
+import { cacheProvider } from "../../../lib/cache/init.js";
 
 export async function register( userData ) {
     const userExist = await authRepository.checkUserExistByEmail( userData.email );
@@ -40,11 +41,21 @@ export async function verifyAccount( email, code ) {
 }
 
 export async function login( email, password ) {
+    const incorrectPasswordCache = await cacheProvider.get( `incorrectPasswordCacheKey:${ email }` );
+    if ( incorrectPasswordCache === "0" ) throw blockedLogin;
+
     const user = await authRepository.checkUserExistByEmail( email );
     if ( !user ) throw userNotExist;
     if ( user.isVerified === false ) throw userNotVerified;
     const match = await comparePassword( password, user.password );
-    if ( !match ) throw incorrectPassword;
+    if ( !match ) {
+        const ttlRemaining = await cacheProvider.ttl( `incorrectPasswordCacheKey:${ email }` );
+        const attempts = incorrectPasswordCache ?? 5;
+        const ttl = ttlRemaining === -2 ? 5 * 60 : ttlRemaining;
+        await cacheProvider.set( `incorrectPasswordCacheKey:${ email }`, attempts - 1, ttl );
+        throw incorrectPassword;
+    }
+    await cacheProvider.del( `incorrectPasswordCacheKey:${ email }` );
     const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } );
     const refreshToken = generateRefreshToken( { id: user._id, email: user.email, name: user.name } );
 
