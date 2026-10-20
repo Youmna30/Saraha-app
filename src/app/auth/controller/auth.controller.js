@@ -1,5 +1,5 @@
 import { validateBody } from "../../../lib/validation/validation.js";
-import { loginDTO, resetPasswordDTO, resgisterDTO, sendOtpDTO, verifyAccountDTO } from "../dto/auth.dto.js";
+import { loginConfirmationDto, loginDTO, resetPasswordDTO, resgisterDTO, sendOtpDTO, verifyAccountDTO, verifyEnableTwoStepVerificationDto } from "../dto/auth.dto.js";
 import { noToken } from "../errors.js";
 import * as authService from "../service/auth.service.js";
 
@@ -36,7 +36,14 @@ export async function login( req, res, next ) {
     try {
         const data = validateBody( loginDTO, req.body );
         const { email, password } = data;
-        const { accessToken, refreshToken } = await authService.login( email, password );
+        const tokens = await authService.login( email, password );
+        if ( !tokens ) {
+            return res.status( 200 ).json( {
+                "message": "Code sent, please check your email",
+                "success": true
+            } );
+        }
+        const { accessToken, refreshToken } = tokens
         res.cookie( 'access_token', accessToken, {
             httpOnly: true,
             maxAge: 60 * 60 * 1000
@@ -124,4 +131,59 @@ export async function refreshToken( req, res, next ) {
         next( error );
     }
 
+}
+
+export async function enableTwoStepVerification( req, res, next ) {
+    try {
+        const userId = req.user.id;
+        await authService.enableTwoStepVerification( userId );
+        res.status( 200 ).json( {
+            "message": "Code sent, please check your email",
+            "success": true
+        } );
+
+    } catch ( error ) {
+        next( error );
+    }
+
+}
+export async function verifyEnableTwoStepVerification( req, res, next ) {
+    try {
+        const email = req.user.email;
+        const data = validateBody( verifyEnableTwoStepVerificationDto, req.body )
+        const { code } = data;
+        const user = await authService.verfiyEnableTwoStepVerification( email, code );
+        res.status( 200 ).json( {
+            "message": "Two Step Verification is enabled successfully",
+            "success": true,
+            user
+        } );
+
+    } catch ( error ) {
+        next( error );
+    }
+
+}
+export async function loginConfirmation( req, res, next ) {
+    try {
+        const data = validateBody( loginConfirmationDto, req.body );
+        const { email, code } = data;
+        const { accessToken, refreshToken } = await authService.loginConfirmation( email, code );
+        res.cookie( 'access_token', accessToken, {
+            httpOnly: true,
+            maxAge: 60 * 60 * 1000
+        } );
+        res.cookie( 'refresh_token', refreshToken, {
+            httpOnly: true,
+            maxAge: 7 * 24 * 60 * 60 * 1000,
+            path: "/api/auth/refresh-token"
+        } );
+        res.status( 200 ).json( {
+            message: " User Login Successfully",
+            success: true
+        } )
+
+    } catch ( error ) {
+        next( error );
+    }
 }

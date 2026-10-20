@@ -4,7 +4,7 @@ import * as otpRepository from "../repository/otp.repo.js";
 import * as userRepository from "../../user/repository/user.repo.js"
 import * as otp from "../../../lib/utils/otp.js";
 import { userAlreadyVerified, userNotExist, userNotVerified, userAlreadyExist } from "../../user/errors.js";
-import { blockedLogin, incorrectPassword, invalidCode, invalidRefreshToken, noToken, optExpired } from "../errors.js";
+import { alreadyTwoStepVerification, blockedLogin, incorrectPassword, invalidCode, invalidRefreshToken, noToken, noTwoStepVerification, optExpired } from "../errors.js";
 import { comparePassword, hashPassword } from "../utils/hash.js";
 import { decodeToken, generateAccessToken, generateRefreshToken } from "../utils/token.js";
 import { verifyGoogleToken } from "../../../lib/utils/google.auth.js";
@@ -56,6 +56,17 @@ export async function login( email, password ) {
         throw incorrectPassword;
     }
     await cacheProvider.del( `incorrectPasswordCacheKey:${ email }` );
+
+    if ( user.twoStepVerification === true ) {
+        const otpCode = otp.generateOtp();
+        await otpRepository.createOtp( {
+            code: otpCode,
+            email: user.email,
+            expiresAt: Date.now() + 1000 * 60 * 5
+        } )
+        await mailjetProvider.sendEmail( user.email, "Two Step Verification code", `Your verification code is ${ otpCode }` )
+        return;
+    }
     const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } );
     const refreshToken = generateRefreshToken( { id: user._id, email: user.email, name: user.name } );
 
@@ -116,4 +127,45 @@ export async function refreshToken( refreshToken ) {
     const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } )
     return accessToken;
 
+}
+export async function enableTwoStepVerification( userId ) {
+    const user = await userRepository.findUserById( userId );
+    if ( !user ) throw userNotExist;
+    if ( user.isVerified === false ) throw userNotVerified;
+    if ( user.twoStepVerification === true ) throw alreadyTwoStepVerification;
+    const otpCode = otp.generateOtp();
+    await otpRepository.createOtp( {
+        code: otpCode,
+        email: user.email,
+        expiresAt: Date.now() + 1000 * 60 * 5
+    } )
+    await mailjetProvider.sendEmail( user.email, "Two Step Verification code", `Your verification code is ${ otpCode }` )
+    return;
+}
+
+export async function verfiyEnableTwoStepVerification( email, code ) {
+    const user = await authRepository.checkUserExistByEmail( email );
+    if ( !user ) throw userNotExist;
+    if ( user.isVerified === false ) throw userNotVerified;
+    if ( user.twoStepVerification === true ) throw alreadyTwoStepVerification;
+    const otp = await otpRepository.getOtpByEmail( email );
+    if ( !otp ) throw optExpired;
+    if ( otp.code !== code ) throw invalidCode;
+    const updatedUser = await userRepository.updateUserByEmail( email, { twoStepVerification: true } );
+    await otpRepository.deleteOtp( email );
+    return updatedUser;
+}
+
+export async function loginConfirmation( email, code ) {
+    const user = await authRepository.checkUserExistByEmail( email );
+    if ( !user ) throw userNotExist;
+    if ( user.isVerified === false ) throw userNotVerified;
+    if ( user.twoStepVerification === false ) throw noTwoStepVerification;
+    const otp = await otpRepository.getOtpByEmail( email );
+    if ( !otp ) throw optExpired;
+    if ( otp.code !== code ) throw invalidCode;
+    await otpRepository.deleteOtp( email );
+    const accessToken = generateAccessToken( { id: user._id, email: user.email, name: user.name } );
+    const refreshToken = generateRefreshToken( { id: user._id, email: user.email, name: user.name } );
+    return { accessToken, refreshToken }
 }

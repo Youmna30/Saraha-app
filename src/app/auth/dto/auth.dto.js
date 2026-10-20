@@ -27,3 +27,11 @@ export const resetPasswordDTO = z.object( {
     code: z.string( "Code is required" ).length( 6 ).trim(),
     newPassword: z.string( "New password is required" ).min( 8 ).max( 16 ).trim()
 } )
+
+export const verifyEnableTwoStepVerificationDto = z.object( {
+    code: z.string( "Code is required" ).length( 6 ).trim()
+} )
+export const loginConfirmationDto = z.object( {
+    email: z.email( "Email is required" ).toLowerCase().trim(),
+    code: z.string( "Code is required" ).length( 6 ).trim()
+} )

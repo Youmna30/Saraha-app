@@ -42,7 +42,11 @@ const userSchema = new Schema( {
     },
     profilePicturePath: String,
     coverImagesPaths: [ String ],
-    cvPath: String
+    cvPath: String,
+    twoStepVerification: {
+        type: Boolean,
+        default: false
+    }
 
 }, {
     timestamps: {
