@@ -20,6 +20,10 @@ const messageSchema = new Schema( {
     isDeleted: {
         type: Boolean,
         default: false
+    },
+    isAnonymous: {
+        type: Boolean,
+        default: true
     }
 
 }, {
